@@ -17,6 +17,7 @@ from ament_index_python.packages import get_package_share_directory
 import quaternion
 from rclpy.duration import Duration
 import threading
+from tf_transformations import euler_from_quaternion, quaternion_from_euler, quaternion_multiply, quaternion_matrix
 
 
 class fbfTransformer(Node):
@@ -55,64 +56,13 @@ class fbfTransformer(Node):
 
     def get_bodyfixed_rotation_matrix(self):
 
-        yaml_file_path = os.path.join(get_package_share_directory('imu_teleop'), 'config', 'stand_stoop_mean.yaml')
+        yaml_file_path = os.path.join(get_package_share_directory('imu_teleop'), 'config', 'bodyfixed_quat.yaml')
 
         with open(yaml_file_path, 'r') as file:
             lines = file.readlines()
-            stand_mean_line = lines[0].replace('stand_mean: ', '')
-            stoop_mean_line = lines[1].replace('stoop_mean: ', '')
-
-            # Convert the remaining parts into NumPy arrays
-            stand_mean = np.array(eval(stand_mean_line.strip()))
-            stoop_mean = np.array(eval(stoop_mean_line.strip()))
-        print(stand_mean)
-        print(stoop_mean)
-
-        self.stand_data = stand_mean
-        self.stoop_data = stoop_mean
-
-        self.initial_stand_calculation = self.stand_data
-        self.initial_stoop_calculation = self.stoop_data
-
-        self.stand_rotation_matrix = self.euler_to_rotation_matrix(
-            self.initial_stand_calculation[0], self.initial_stand_calculation[1], self.initial_stand_calculation[2])
-
-        self.stoop_rotation_matrix = self.euler_to_rotation_matrix(
-            self.initial_stoop_calculation[0], self.initial_stoop_calculation[1], self.initial_stoop_calculation[2])
-
-        k_rotation_matrix = np.dot(self.stoop_rotation_matrix, self.stand_rotation_matrix.T)
-        trace_R = np.trace(k_rotation_matrix)
-        k_angle = np.arccos((trace_R - 1) / 2)
-
-        epsilon = 1e-6
-        if k_angle < epsilon:
-            k_axis = np.array([1, 0, 0])
-        else:
-            rx = k_rotation_matrix[2, 1] - k_rotation_matrix[1, 2]
-            ry = k_rotation_matrix[0, 2] - k_rotation_matrix[2, 0]
-            rz = k_rotation_matrix[1, 0] - k_rotation_matrix[0, 1]
-            k_axis = np.array([rx, ry, rz])
-            k_axis = k_axis / np.linalg.norm(k_axis)
-
-        print("k", k_axis)
-
-        z_axis = np.array([0, 0, 1])
-
-        x_axis = np.cross(k_axis, z_axis)
-        y_axis = np.cross(z_axis, x_axis)
-
-        x_axis = x_axis / np.linalg.norm(x_axis)
-        y_axis = y_axis / np.linalg.norm(y_axis)
-        z_axis = z_axis / np.linalg.norm(z_axis)
-
-        assert np.isclose(np.dot(x_axis, y_axis), 0) and np.isclose(np.dot(y_axis, z_axis), 0) and np.isclose(
-            np.dot(z_axis, x_axis), 0), "Vectors must be orthogonal"
-
-        self.bf_rotation_matrix = np.column_stack((x_axis, y_axis, z_axis))
-        self.bodyfixed_quat = quaternion.from_rotation_matrix(self.bf_rotation_matrix)
-
-        print("Rotation Matrix:")
-        print(self.bf_rotation_matrix)
+            bodyfixed_quat_readline = lines[0].replace('bodyfixed_quat: ', '')
+            self.bodyfixed_quat = np.array(eval(bodyfixed_quat_readline.strip()))
+            self.bodyfixed_quat = quaternion.from_float_array(self.bodyfixed_quat)
         print(self.bodyfixed_quat)
 
     def elbow_imu_callback(self, msg):
@@ -201,6 +151,7 @@ class fbfTransformer(Node):
 
         time_msg = self.get_clock().now().to_msg()
 
+        print(fbf_quat)
         tf_fbf = tf2_ros.TransformStamped()
         tf_fbf.header.stamp = time_msg
         tf_fbf.header.frame_id = "world"
@@ -304,53 +255,7 @@ class fbfTransformer(Node):
             self.pure_s_ang_x, self.pure_s_ang_y, self.pure_s_ang_z, self.pure_w_ang_x, self.pure_w_ang_y, self.pure_w_ang_z]
         self.pub_pure_ang.publish(pub_pure_msg)
 
-    def euler_to_rotation_matrix(self, roll, pitch, yaw):
-        """
-        Convert Euler angles (in degrees) to a rotation matrix in ZYX order.
-        
-        Parameters:
-        - yaw: Rotation angle in degrees around the Z-axis
-        - pitch: Rotation angle in degrees around the Y-axis
-        - roll: Rotation angle in degrees around the X-axis
-        
-        Returns:
-        - A 3x3 rotation matrix.
-        """
-        
-        # Convert to radians
-        yaw_rad = np.radians(yaw)
-        pitch_rad = np.radians(pitch)
-        roll_rad = np.radians(roll)
-        
-        # Pre-calculate sine and cosine for each angle
-        sz = np.sin(yaw_rad)
-        cz = np.cos(yaw_rad)
-        sy = np.sin(pitch_rad)
-        cy = np.cos(pitch_rad)
-        sx = np.sin(roll_rad)
-        cx = np.cos(roll_rad)
-        
-        # Define the rotation matrix using the ZYX Euler angles
-        r00 = cz * cy
-        r01 = (cz * sy * sx) - (sz * cx)
-        r02 = (cz * sy * cx) + (sz * sx)
-        
-        r10 = sz * cy
-        r11 = (sz * sy * sx) + (cz * cx)
-        r12 = (sz * sy * cx) - (cz * sx)
-        
-        r20 = -sy
-        r21 = cy * sx
-        r22 = cy * cx
-        
-        # Construct the rotation matrix
-        rotation_matrix = np.array([
-            [r00, r01, r02],
-            [r10, r11, r12],
-            [r20, r21, r22]
-        ])
-        
-        return rotation_matrix
+    
 
 if __name__ == '__main__':
     rclpy.init()

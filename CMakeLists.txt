@@ -36,7 +36,7 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
       scripts/calibrated_imu_publisher.py
       scripts/fbf_imu.py
-      scripts/save_stand_stoop.py
+      scripts/calc_bf_quat.py
       DESTINATION lib/${PROJECT_NAME}
 )
 
