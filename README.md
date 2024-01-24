@@ -4,6 +4,7 @@ sudo apt-get install ros-${ROS_DISTRO}-ur
 sudo apt install ros-humble-moveit
 git clone https://github.com/kemjensak/imu_teleop.git
 git clone https://github.com/kemjensak/xsens_mtw_driver-release
+git clone https://github.com/kemjensak/moveit_servo_imu.git
 
 ros2 run xsens_mtw_driver mt_w_manager
 (allign all 4 IMUs in same orientation)
