@@ -8,9 +8,10 @@ git clone https://github.com/kemjensak/moveit_servo_imu.git
 
 ros2 run xsens_mtw_driver mt_w_manager
 (allign all 4 IMUs in same orientation)
-ros2 run imu_teleop save_stand_stoop.py
+ros2 launch connect_imu_launch.py
+(센서부착)
+ros2 run imu_teleop calc_bf_quat.py
 (stand stoop)
-ros2 launch imu_teleop connect_imu_launch.py
 (mount sensors to specified position and maintain start pose) 
 ros2 run imu_teleop fbf_imu.py
 (pose to control ARM)
