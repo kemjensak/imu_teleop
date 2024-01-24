@@ -1,4 +1,5 @@
 ```
+pip install numpy-quaternion
 sudo apt-get install ros-${ROS_DISTRO}-ur
 sudo apt install ros-humble-moveit
 git clone https://github.com/kemjensak/imu_teleop.git
