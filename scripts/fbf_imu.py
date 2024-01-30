@@ -200,7 +200,7 @@ class fbfTransformer(Node):
         tf_wrist.transform.translation.z = -0.3
         tf_wrist.transform.rotation.x = wrist_quat[1]
         tf_wrist.transform.rotation.y = wrist_quat[2]
-        tf_wrist.transform.rotation.z = -wrist_quat[3]
+        tf_wrist.transform.rotation.z = wrist_quat[3]
         tf_wrist.transform.rotation.w = wrist_quat[0]
         self.tf_broadcaster.sendTransform(tf_wrist)
 
